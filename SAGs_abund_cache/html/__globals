@@ -1,0 +1,13 @@
+libraries	library
+read_V9_from_SAGs	==	:=	$	$<-	dataset	data.table	getSequence	grepl	head	length	names	nrow	paste	rbind	read.fasta	sequences	setwd	sub	T	toupper	unlist	V9
+blast_SAGs-V9_on_swarms	>	:=	c	fread	list	setnames	subj_cov	V1	V2	V3	V5	V6	V7
+samples_selection	==	&	c	fraction	fread	template
+fig_all_merged	:=	[<-	c	colnames<-	data_abund	dataset	dim	fread	identity	ifelse	is.na	md5sum	merge	nrow	order	rank	SAG	SAGs_BLAST_out	SAG_V9_all	sapply	sequences	setkey	sum	T	V1	value
+GEN_SAGs	==	dataset	nrow	temp_GEN
+ICM_SAGs	==	dataset	nrow	temp_ICM
+BLA_SAGs	==	dataset	nrow	temp_BLA
+MMETSP_SAGs	==	dataset	nrow	temp_MMETSP
+rank_abund_curves	%>%	aes	arrange	arrangeGrob	c	dataset	geom_point	ggplot	ggsave	grid.arrange	labs	rank	scale_colour_manual	scale_y_log10	temp_BLA	temp_GEN	temp_ICM	temp_MMETSP	theme_bw	V1
+stations_occurrence	%>%	aes	arrange	arrangeGrob	c	dataset	geom_point	ggplot	ggsave	grid.arrange	labs	no_of_stations	scale_colour_manual	scale_y_log10	temp_BLA	temp_GEN	temp_ICM	temp_MMETSP	theme_bw	V1
+libraries, 	library
+plot_occur_panel_in_html	[[	$<-	cbind	ggplotGrob	grid.draw	grid.newpage	lapply	list	p1	p2	p3	p4	rbind	unit.pmax

@@ -15,7 +15,7 @@ output:
 #error hook to kill knitr in case of errors
 library(knitr)
 knit_hooks$set(error = function(x, options) stop(x))
-opts_chunk$set(cache=TRUE, autodep=TRUE, dev='pdf')
+opts_chunk$set(cache=TRUE, autodep=TRUE)
 ```
 --->
 
@@ -189,8 +189,34 @@ No. of MMETSP V9 sequences aligned with a swarm:
 nrow(temp_MMETSP[dataset=="MMETSP"])
 ```
 
+\
+Summary:
 
-```{r rank_abund_curves, echo=F,Fresults="hide", message=F, warning=F, fig.align="center", fig.width=9, fig.height=6.75}
+GENOSCOPE:\
+  - 903 SAGs.\
+  - 868 SAGs contain the V9 sequence.\
+  - 546 SAGs could be aligned with some swarm (100% identity, >80% coverage).\
+  
+ICM:\
+  - 40 SAGs.\
+  - 31 SAGs contain the V9 sequence.\
+  - 16 SAGs could be aligned with some swarm (100% identity, >80% coverage).\
+  
+BLANES:\
+  - 169 SAGs.\
+  - 163 SAGs contain the V9 sequence.\
+  - 99 SAGs could be aligned with some swarm (100% identity, >80% coverage).\
+  
+MMETSP:\
+  - 537 V9 sequences.\
+  - 197 V9 sequences could be aligned with some swarm (100% identity, >80% coverage).\
+\
+
+
+## 1.1) Rank abundance curves
+
+
+```{r rank_abund_curves, echo=F,Fresults="hide", message=F, warning=F, fig.align="center", fig.width=16, fig.height=12}
 
 p1<-ggplot(temp_GEN %>% arrange(dataset), aes(x=rank,y=V1))+
   geom_point(aes(colour=dataset))+
@@ -202,7 +228,7 @@ p1<-ggplot(temp_GEN %>% arrange(dataset), aes(x=rank,y=V1))+
   theme_bw()+
   labs(colour = "") 
 ggsave("./output/1A_rank_abund_GEN.pdf",height=6.75,width=9)
-p1
+
 
 p2<-ggplot(temp_ICM %>% arrange(dataset), aes(x=rank,y=V1))+
   geom_point(aes(colour=dataset))+
@@ -214,7 +240,7 @@ p2<-ggplot(temp_ICM %>% arrange(dataset), aes(x=rank,y=V1))+
   theme_bw()+
   labs(colour = "")
 ggsave("./output/1B_rank_abund_ICM.pdf",height=6.75,width=9)
-p2
+
 
 p3<-ggplot(temp_BLA %>% arrange(dataset), aes(x=rank,y=V1))+
   geom_point(aes(colour=dataset))+
@@ -226,7 +252,6 @@ p3<-ggplot(temp_BLA %>% arrange(dataset), aes(x=rank,y=V1))+
   theme_bw()+
   labs(colour = "")
 ggsave("./output/1C_rank_abund_BLA.pdf",height=6.75,width=9)
-p3
 
 p4<-ggplot(temp_MMETSP %>% arrange(dataset), aes(x=rank,y=V1))+
   geom_point(aes(colour=dataset))+
@@ -238,17 +263,19 @@ p4<-ggplot(temp_MMETSP %>% arrange(dataset), aes(x=rank,y=V1))+
   theme_bw()+
   labs(colour = "")
 ggsave("./output/1D_rank_abund_MMETSP.pdf",height=6.75,width=9)
-p4
 
-#grid.arrange(p1, p2, p3, p4, ncol = 2, top="\n[Figure 1] Rank-abundance curves\n(piconano- & nano- size fractions; 105 stations; all depths)\n")
+
+grid.arrange(p1, p2, p3, p4, ncol = 2, top="\n[Figure 1] Rank-abundance curves\n(piconano- & nano- size fractions; 105 stations; all depths)\n")
 
 g <- arrangeGrob(p1, p2, p3, p4, ncol = 2, top="\n[Figure 1] Rank-abundance curves\n(piconano- & nano- size fractions; 105 stations; all depths)\n")
 ggsave(file="./output/panel1_rank_abund.pdf", g)
 ```
 
 
+## 1.2) Occurrence in Tara Oceans stations
 
-```{r stations_occurrence, echo=F, results="hide", message=F, warning=F, fig.align="center", fig.width=9, fig.height=6.75}
+
+```{r stations_occurrence, echo=F, results="hide", message=F, warning=F, fig.align="center", fig.width=15, fig.height=10}
 
 p1<-ggplot(temp_GEN %>% arrange(dataset), aes(x=no_of_stations,y=V1))+
   geom_point(aes(colour=dataset), size=1)+
@@ -261,7 +288,7 @@ p1<-ggplot(temp_GEN %>% arrange(dataset), aes(x=no_of_stations,y=V1))+
   theme_bw()+
   labs(colour = "")
 ggsave("./output/2A_stations_occurrence_GEN.pdf",height=6.75,width=9)
-p1
+
 
 p2<-ggplot(temp_ICM %>% arrange(dataset), aes(x=no_of_stations,y=V1))+
   geom_point(aes(colour=dataset), size=1)+
@@ -274,7 +301,7 @@ p2<-ggplot(temp_ICM %>% arrange(dataset), aes(x=no_of_stations,y=V1))+
   theme_bw()+
   labs(colour = "")
 ggsave("./output/2B_stations_occurrence_ICM.pdf",height=6.75,width=9)
-p2
+
 
 p3<-ggplot(temp_BLA %>% arrange(dataset), aes(x=no_of_stations,y=V1))+
   geom_point(aes(colour=dataset), size=1)+
@@ -287,7 +314,7 @@ p3<-ggplot(temp_BLA %>% arrange(dataset), aes(x=no_of_stations,y=V1))+
   theme_bw()+
   labs(colour = "")
 ggsave("./output/2C_stations_occurrence_BLA.pdf",height=6.75,width=9)
-p3
+
 
 p4<-ggplot(temp_MMETSP %>% arrange(dataset), aes(x=no_of_stations,y=V1))+
   geom_point(aes(colour=dataset), size=1)+
@@ -300,9 +327,9 @@ p4<-ggplot(temp_MMETSP %>% arrange(dataset), aes(x=no_of_stations,y=V1))+
   theme_bw()+
   labs(colour = "")
 ggsave("./output/2D_stations_occurrence_MMETSP.pdf",height=6.75,width=9)
-p4
 
-#grid.arrange(p1, p2, p3, p4, ncol = 2, top="\n[Figure 2] Occurrence in Tara Oceans stations\n(piconano- & nano- size fractions; 105 stations; all depths)\n")
+
+grid.arrange(p1, p2, p3, p4, ncol = 2, top="\n[Figure 2] Occurrence in Tara Oceans stations\n(piconano- & nano- size fractions; 105 stations; all depths)\n")
 
 g <- arrangeGrob(p1, p2, p3, p4, nrow=2,  top="\n[Figure 2] Occurrence in Tara Oceans stations\n(piconano- & nano- size fractions; 105 stations; all depths)\n")
 ggsave(file="./output/panel2_stations_occurrence.pdf", g)
