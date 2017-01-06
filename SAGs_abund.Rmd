@@ -1,0 +1,311 @@
+---
+title: "SAGs global abundance"
+date: "22.11.2016"
+output:  
+  html_document:
+    theme: united
+    toc: yes
+  pdf_document:
+    highlight: zenburn
+    toc: yes
+---
+
+<!--- INITIALIZATION
+```{r, echo=FALSE}
+#error hook to kill knitr in case of errors
+library(knitr)
+knit_hooks$set(error = function(x, options) stop(x))
+opts_chunk$set(cache=TRUE, autodep=TRUE, dev='pdf')
+```
+--->
+
+
+```{r libraries, , echo=F, message=F, results="hide", warning=F}
+library(data.table)
+library(dplyr)
+library(DT)
+library(ggplot2)
+library(ggrepel)
+library(magrittr)
+library(plyr)
+library(reshape2)
+library(seqinr)
+library(shiny)
+library(gridExtra)
+library(gtable)
+library(grid)
+```
+
+
+```{r read_V9_from_SAGs, echo=F, message=F, results="hide", warning=F}
+setwd("~/Documents/2Q16/analyses/exploratory_figures_v2/SAGs_abund")
+
+primer1<-"TTGTACACACCGCCC"
+
+#read FASTA files (Genoscope, ICM and Blanes SAGs) and transform them into data.frames
+SAG_18S_GEN<-read.fasta("input/SAGs_18S_Genoscope.fasta")
+length(SAG_18S_GEN) #903
+SAG_18S_GEN<-data.table(IDs=names(SAG_18S_GEN), sequences=unlist(getSequence(SAG_18S_GEN, as.string=T)))
+SAG_18S_GEN$sequences<-toupper(SAG_18S_GEN$sequences)
+SAG_18S_GEN[,dataset:="Genoscope"]
+
+SAG_18S_ICM<-read.fasta("input/TARA_078_SAG_plate_18S_euk.fasta")
+length(SAG_18S_ICM) #40
+SAG_18S_ICM<-data.table(IDs=names(SAG_18S_ICM), sequences=unlist(getSequence(SAG_18S_ICM, as.string=T)))
+SAG_18S_ICM$sequences<-toupper(SAG_18S_ICM$sequences)
+SAG_18S_ICM[,dataset:="ICM"]
+
+
+SAG_18S_BLA<-read.fasta("input/Sags_Dec2016_cleanIDs.fasta")
+length(SAG_18S_BLA) #169
+SAG_18S_BLA<-data.table(IDs=names(SAG_18S_BLA), sequences=unlist(getSequence(SAG_18S_BLA, as.string=T)))
+SAG_18S_BLA$sequences<-toupper(SAG_18S_BLA$sequences)
+SAG_18S_BLA[,dataset:="Blanes"]
+
+SAG_18S_all<-rbind(SAG_18S_GEN,SAG_18S_ICM,SAG_18S_BLA)
+
+SAG_V9_all<-SAG_18S_all
+SAG_V9_all[,V9:=grepl(primer1,sequences)]
+SAG_V9_all<-SAG_V9_all[V9==T]
+SAG_V9_all[,sequences:=sub(paste("^.+",primer1,sep=""),"",sequences)]
+SAG_V9_all[,V9:=NULL]
+nrow(SAG_V9_all) #1062 SAGs (868 GEN; 31 ICM; 163 BLA)
+head(SAG_V9_all)
+
+#add MMETSP V9
+MMETSP_V9<-read.fasta("input/MMETSP_v9_unieuk5decembre2016_standard.fasta")
+length(MMETSP_V9) #537
+MMETSP_V9<-data.table(IDs=names(MMETSP_V9), sequences=unlist(getSequence(MMETSP_V9, as.string=T)))
+MMETSP_V9$sequences<-toupper(MMETSP_V9$sequences)
+MMETSP_V9[,dataset:="MMETSP"]
+
+SAG_V9_all<-rbind(SAG_V9_all,MMETSP_V9)
+nrow(SAG_V9_all) #1599
+
+#write.fasta(sequences=as.list(SAG_V9_all$sequences), names=SAG_V9_all$IDs, file.out="./input/SAGs_V9_all.fasta")
+```
+
+A total amount of 1062 SAGs (GEN: 868 out of 903; ICM: 31 out of 40; BLA: 163 out of 169) contain the sequence of the forward primer 1389F for the V9 region (5’- TTGTACACACCGCCC -3’). None of the 1062 SAGs contains the complete sequence of the reverse primer 1510R (5’- CCTTCYGCAGGTTCACCTAC -3’) - most of the 18S rDNA SAGs miss the last ~5 bp of the V9 region.
+
+We blasted the V9 sequences of SAGs and MMETSPs on Tara swarms and we selected the hits showing a coverage >80% and a similarity =100%.
+
+# 1) Piconano- & nano- size fractions
+
+```{r blast_SAGs-V9_on_swarms, echo=F, message=F, results="hide", warning=F}
+
+#data <- fread("../../../data/TARA_V9/globaldataset.otu.v20160830", select = c("md5sum","sequence"))
+#data[1:5,]
+#write.fasta(sequences=as.list(data$sequence), names=data$md5sum, file.out="./input/swarms_ref_db.fasta")
+#nrow(data)
+
+#system("vsearch --usearch_global sag_V9.fas --maxrejects 0 --maxaccepts 0 --top_hits_only -db /home0/data/Tara/last/tara_ref.fas --blast6out output.txt --id 1")
+#system("vsearch --usearch_global ./input/SAGs_V9_all.fasta --maxrejects 0 --maxaccepts 0 -db ./input/swarms_ref_db.fasta --blast6out output.txt --id 1")
+ 
+SAGs_BLAST_out<-fread("input/SAGs_swarms_BLAST_noreplicates.txt") #1158
+SAGs_BLAST_out[,subj_cov:=(V5*100/V6)] 
+
+#filter by subject coverage (remove short query sequences or alignments with short overlaping regions)
+SAGs_BLAST_out<-SAGs_BLAST_out[subj_cov>80] #981
+
+#filter by query coverage (remove short subject sequences)
+SAGs_BLAST_out<-SAGs_BLAST_out[V7>80] #975
+SAGs_BLAST_out<-SAGs_BLAST_out[,list(V1,V2,V3,V5,V6,V7,subj_cov)]
+setnames(SAGs_BLAST_out,c("SAG_id","md5sum","identity","SAG_length","swarm_length","query_cov","subj_cov"))
+#SAGs_BLAST_out<-SAGs_BLAST_out[identity==100]
+```
+
+
+```{r samples_selection, echo=F, message=F, results="hide", warning=F}
+#global occurrence of swarms in Tara Oceans, BioMarKs and Tara Arctic.
+#data<-fread("~/Documents/2Q16/data/TARA_V9/globaldataset.otu.v20160830")
+#head(data)
+
+#selection of Tara samples.
+sple<-fread("./input/sple.csv")
+sple<-sple[fraction%in%c("0.8-5","5-20")&template=="DNA"]
+
+#data_abund<-data[,.SD,.SDcols=c("md5sum",sple$sample)]
+#data_abund<-melt(data_abund,id.vars="md5sum")
+#data_abund<-data_abund[value>0]
+
+#setkey(data_abund,variable)
+#setkey(sple,sample)
+#data_abund<-sple[data_abund]
+
+#write.table(data_abund, "data_abund_table.txt", sep="\t")
+data_abund<-fread("./input/data_abund_tb_piconano_nano.txt")
+```
+
+
+```{r fig_all_merged, echo=F,message=F, results="hide", warning=F}
+temp<-data_abund[,sum(value),by=md5sum]
+setkey(temp,md5sum)
+setkey(SAGs_BLAST_out,md5sum)
+temp<-SAGs_BLAST_out[temp,allow.cartesian=T]
+temp<-temp[order(V1,decreasing = T)]
+temp[,rank:=1:nrow(temp)]
+#select the swarms showing occurrence>10
+#temp<-temp[V1>10]
+temp[,SAG:=sapply(identity,function(X) ifelse(is.na(X),"no","yes"))]
+#add db info
+SAG_V9_all[,sequences:=NULL]
+temp<-merge(temp, SAG_V9_all, by.x="SAG_id", by.y="IDs", all.x=TRUE)
+#temp[is.na(temp$dataset)]<-"no_db" 
+
+temp[1:5]
+temp[,11][is.na(temp[,11])]<-"any_db"
+
+#no. of stations in which SAGs/swarms occur
+swarms_stations<-fread("input/count_stations_output_piconano_nano.txt")
+colnames(swarms_stations)<-c("md5sum", "no_of_stations")
+temp<-merge(temp, swarms_stations, by="md5sum")
+dim(temp)
+temp[1:50,]
+
+temp_GEN<-temp[dataset%in%c("any_db","Genoscope")] #GEN: 260571-260025 = 546 
+temp_ICM<-temp[dataset%in%c("any_db","ICM")] #ICM: 260041-260025 = 16
+temp_BLA<-temp[dataset%in%c("any_db","Blanes")] #BLA: 260124-260025 = 99
+temp_MMETSP<-temp[dataset%in%c("any_db","MMETSP")] #MMETSP: 260222-260025 = 197
+```
+
+
+No. of GEN SAGs aligned with a swarm:
+```{r GEN_SAGs, echo=FALSE}
+nrow(temp_GEN[dataset=="Genoscope"])
+```
+
+No. of ICM SAGs aligned with a swarm:
+```{r ICM_SAGs, echo=FALSE}
+nrow(temp_ICM[dataset=="ICM"])
+```
+
+No. of BLA SAGs aligned with a swarm:
+```{r BLA_SAGs, echo=FALSE}
+nrow(temp_BLA[dataset=="Blanes"])
+```
+
+No. of MMETSP V9 sequences aligned with a swarm:
+```{r MMETSP_SAGs, echo=FALSE}
+nrow(temp_MMETSP[dataset=="MMETSP"])
+```
+
+
+```{r rank_abund_curves, echo=F,Fresults="hide", message=F, warning=F, fig.align="center", fig.width=9, fig.height=6.75}
+
+p1<-ggplot(temp_GEN %>% arrange(dataset), aes(x=rank,y=V1))+
+  geom_point(aes(colour=dataset))+
+  scale_y_log10(name="abundance")+
+  scale_colour_manual(values=c("any_db"="grey68", "Genoscope"="orangered3"),
+                    breaks=c("any_db", "Genoscope"),
+                    labels=c("Swarms", "Genoscope SAGs"))+
+  labs(title="[Fig. 1A] Genoscope SAGs")+
+  theme_bw()+
+  labs(colour = "") 
+ggsave("./output/1A_rank_abund_GEN.pdf",height=6.75,width=9)
+p1
+
+p2<-ggplot(temp_ICM %>% arrange(dataset), aes(x=rank,y=V1))+
+  geom_point(aes(colour=dataset))+
+  scale_y_log10(name="abundance")+
+  scale_colour_manual(values=c("any_db"="grey68", "ICM"="#0072B2"),
+                    breaks=c("any_db", "ICM"),
+                    labels=c("Swarms", "ICM SAGs"))+
+  labs(title="[Fig. 1B] ICM SAGs")+
+  theme_bw()+
+  labs(colour = "")
+ggsave("./output/1B_rank_abund_ICM.pdf",height=6.75,width=9)
+p2
+
+p3<-ggplot(temp_BLA %>% arrange(dataset), aes(x=rank,y=V1))+
+  geom_point(aes(colour=dataset))+
+  scale_y_log10(name="abundance")+
+  scale_colour_manual(values=c("any_db"="grey68", "Blanes"="#009E73"),
+                    breaks=c("any_db", "Blanes"),
+                    labels=c("Swarms", "Blanes SAGs"))+
+  labs(title="[Fig. 1C] Blanes SAGs")+
+  theme_bw()+
+  labs(colour = "")
+ggsave("./output/1C_rank_abund_BLA.pdf",height=6.75,width=9)
+p3
+
+p4<-ggplot(temp_MMETSP %>% arrange(dataset), aes(x=rank,y=V1))+
+  geom_point(aes(colour=dataset))+
+  scale_y_log10(name="abundance")+
+  scale_colour_manual(values=c("any_db"="grey68", "MMETSP"="grey16"),
+                    breaks=c("any_db", "MMETSP"),
+                    labels=c("Swarms", "MMETSP V9 sequences"))+
+  labs(title="[Fig. 1D] MMETSP V9 sequences")+
+  theme_bw()+
+  labs(colour = "")
+ggsave("./output/1D_rank_abund_MMETSP.pdf",height=6.75,width=9)
+p4
+
+#grid.arrange(p1, p2, p3, p4, ncol = 2, top="\n[Figure 1] Rank-abundance curves\n(piconano- & nano- size fractions; 105 stations; all depths)\n")
+
+g <- arrangeGrob(p1, p2, p3, p4, ncol = 2, top="\n[Figure 1] Rank-abundance curves\n(piconano- & nano- size fractions; 105 stations; all depths)\n")
+ggsave(file="./output/panel1_rank_abund.pdf", g)
+```
+
+
+
+```{r stations_occurrence, echo=F, results="hide", message=F, warning=F, fig.align="center", fig.width=9, fig.height=6.75}
+
+p1<-ggplot(temp_GEN %>% arrange(dataset), aes(x=no_of_stations,y=V1))+
+  geom_point(aes(colour=dataset), size=1)+
+  scale_y_log10(name="abundance")+
+  scale_colour_manual(values=c("any_db"="grey68", "Genoscope"="orangered3"),
+                    breaks=c("any_db", "Genoscope"),
+                    labels=c("Swarms", "Genoscope SAGs"))+
+  #theme(legend.position="bottom")+
+  labs(title="[Fig. 2A] Genoscope SAGs", x= "Swarm occurrence (number of Tara Oceans stations)\n", y="\nSwarm abundance")+
+  theme_bw()+
+  labs(colour = "")
+ggsave("./output/2A_stations_occurrence_GEN.pdf",height=6.75,width=9)
+p1
+
+p2<-ggplot(temp_ICM %>% arrange(dataset), aes(x=no_of_stations,y=V1))+
+  geom_point(aes(colour=dataset), size=1)+
+  scale_y_log10(name="abundance")+
+  scale_colour_manual(values=c("any_db"="grey68", "ICM"="#0072B2"),
+                    breaks=c("any_db", "ICM"),
+                    labels=c("Swarms", "ICM SAGs"))+
+  #theme(legend.position="bottom")+
+  labs(title="[Fig. 2B] ICM SAGs", x= "Swarm occurrence (number of Tara Oceans stations)\n", y="\nSwarm abundance")+
+  theme_bw()+
+  labs(colour = "")
+ggsave("./output/2B_stations_occurrence_ICM.pdf",height=6.75,width=9)
+p2
+
+p3<-ggplot(temp_BLA %>% arrange(dataset), aes(x=no_of_stations,y=V1))+
+  geom_point(aes(colour=dataset), size=1)+
+  scale_y_log10(name="abundance")+
+  scale_colour_manual(values=c("any_db"="grey68", "Blanes"="#009E73"),
+                    breaks=c("any_db", "Blanes"),
+                    labels=c("Swarms", "Blanes SAGs"))+
+  #theme(legend.position="bottom")+
+  labs(title="[Fig. 2C] Blanes SAGs", x= "Swarm occurrence (number of Tara Oceans stations)\n", y="\nSwarm abundance")+
+  theme_bw()+
+  labs(colour = "")
+ggsave("./output/2C_stations_occurrence_BLA.pdf",height=6.75,width=9)
+p3
+
+p4<-ggplot(temp_MMETSP %>% arrange(dataset), aes(x=no_of_stations,y=V1))+
+  geom_point(aes(colour=dataset), size=1)+
+  scale_y_log10(name="abundance")+
+  scale_colour_manual(values=c("any_db"="grey68", "MMETSP"="grey16"),
+                    breaks=c("any_db", "MMETSP"),
+                    labels=c("Swarms", "MMETSP SAGs"))+
+  #theme(legend.position="bottom")+
+  labs(title="[Fig. 2D] MMETSP V9 sequences", x= "Swarm occurrence (number of Tara Oceans stations)\n", y="\nSwarm abundance")+
+  theme_bw()+
+  labs(colour = "")
+ggsave("./output/2D_stations_occurrence_MMETSP.pdf",height=6.75,width=9)
+p4
+
+#grid.arrange(p1, p2, p3, p4, ncol = 2, top="\n[Figure 2] Occurrence in Tara Oceans stations\n(piconano- & nano- size fractions; 105 stations; all depths)\n")
+
+g <- arrangeGrob(p1, p2, p3, p4, nrow=2,  top="\n[Figure 2] Occurrence in Tara Oceans stations\n(piconano- & nano- size fractions; 105 stations; all depths)\n")
+ggsave(file="./output/panel2_stations_occurrence.pdf", g)
+```
+
+
