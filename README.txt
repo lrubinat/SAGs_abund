@@ -15,7 +15,7 @@
 
 ______________________________________________
 
-2) BLAST of SAGs_V9_all.fasta with swarms db:
+2) BLAST SAGs_V9_all.fasta on swarms db:
 
 	2.1) VSEARCH 
 
@@ -53,7 +53,7 @@ ______________________________________________
 ______________________________________________
 
 
-3) Figure 'abundance vs no. of stations in which SAGs/swarms occur'
+3) Figure 'abundance vs no. of stations in which SAGs/swarms occurre'
 
 	3.1) Get station no. and md5sum 
 	  $ awk -F "\t" '{print $2, $(NF-1)}' data_abund_tb_piconano_nano.txt > data_abund_tb_piconano_nano_reduced.txt
@@ -64,51 +64,7 @@ ______________________________________________
 	3.3) python3 count_stations_per_swarm.py
 
 
-	(repeat the same with "data_abund_tb_piconano.txt" and "data_abund_tb_nano.txt")
+	(repeat the same for "data_abund_tb_piconano.txt" and "data_abund_tb_nano.txt")
 
 ______________________________________________
-
-
-
-
-
-
-
-
-3) Print a table with two columns: swarm ID + swarm taxogroup.
-
-	$awk -F "\t" '{print $3, "\t", $(NF-2)}' data_info_table.txt | sort -V > swarms_taxogroups.txt
-
-		--> Input: "data_info_table.txt" (contains swarms data excluding occurrence data in TAA, TV and BM stations)
-				(R command: >write.table(data[,.SD,.SDcols=colnames(data)[!grepl("TV|TA|BV",colnames(data))]],"data_info_table.txt",sep="\t",row.names=T))
-		--> Output: swarms_taxogroups.txt
-
-	#taxogroups occurrence
-	$awk -F "\t" '{print $(NF-2)}' data_info_table.txt | sort -V | uniq -c > swarms_taxogroups_uniq.txt
-
-
-
-----------------------
-
-4)	Table of swarms classified as red or green algae: swarm ID + taxogroup.
-
-	$grep "Chlorophyta" data_info_table.txt | awk -F "\t" '{print $3, "\t", $(NF-2)}' > swarms_taxogroups_green-red.txt
-	$grep "Streptophyta" data_info_table.txt | awk -F "\t" '{print $3, "\t", $(NF-2)}' >> swarms_taxogroups_green-red.txt
-	$grep "Rhodophyta" data_info_table.txt | awk -F "\t" '{print $3, "\t", $(NF-2)}' >> swarms_taxogroups_green-red.txt
-		
-		--> Input: "data_info_table.txt" #474304 rows
-		--> Output: "swarms_taxogroups_green-red.txt" #9250 rows
-	
-
-	#taxogroups occurrence in Chlorophyta
-	$grep "Chlorophyta" data_info_table.txt | awk -F "\t" '{print $(NF-2)}' | sort -V | uniq -c > swarms_taxogroups_chlorophyta_uniq.txt
-
-
-
------------------------
-
-5) Identification of red and green algae.
-
-	$python3 identify_red_green_algae.py
-
 
