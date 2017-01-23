@@ -336,3 +336,67 @@ ggsave(file="./output/panel2_stations_occurrence.pdf", g)
 ```
 
 
+## 1.3) Abundance table
+
+
+```{r abundance_tables, echo=F, message=F, warning=FALSE}
+
+swarms_taxog<-read.table(file="./input/swarms_taxogroups.txt", head=TRUE, sep="\t")
+SAGs_GEN_plus_MMETSP_annotation<-read.table(file="./input/SAGs_GEN_plus_MMETSP_annotation.txt", head=TRUE, sep="\t")
+
+SAGs_lt<-temp[temp$SAG =="yes"]
+SAGs_lt<-merge(SAGs_lt, swarms_taxog, by.x="md5sum", by.y="md5sum", all.x=TRUE)
+SAGs_lt<-merge(SAGs_lt, SAGs_GEN_plus_MMETSP_annotation, by.x="SAG_id", by.y="ID_seq", all.x=TRUE)
+
+SAGs_lt$classif_MAS1_MAS2_NCBIspp<-as.character(SAGs_lt$classif_MAS1_MAS2_NCBIspp)
+SAGs_lt$taxogroup<-as.character(SAGs_lt$taxogroup)
+
+#round coverage values
+SAGs_lt[,'subj_cov']<-round(SAGs_lt[,'subj_cov'],3)
+
+#reorder columns
+SAGs_lt<-SAGs_lt[,c(1,2,3,4,5,7,8,9,11,12,13,14)]
+#SAGs_lt[1:5,]
+
+SAGs_lt<-as.data.frame(SAGs_lt)
+
+
+datatable(head(SAGs_lt, 858), 
+          colnames = c('ident.%' = 3, 'SAG_lth' = 5, 'swm_lth' = 6, 'coverage' = 7, 'abund' = 8, 'swarm_taxogroup' = 12, 'taxonomic_classif' = 13),
+          filter = list(position = 'top', clear = FALSE, plain = TRUE),
+          class = 'cell-border stripe',
+          caption = 'Table 1: SAGs abundance',
+          
+          options = list(
+            
+            autowidth = TRUE,
+            searchHighlight = TRUE,
+            
+            #1rst: abund; 2nd: coverage; 3rd: id%
+            order = (list(list(7, 'desc'), list(6, 'desc'))),
+            
+            #data position in columns
+            columnDefs = list(list(
+             # className = "dt-center", targets=c(1:10))),
+            
+            #swarms IDs rendering
+              #list(list(
+                targets = 2,
+                render = JS(
+                  "function(data, type, row, meta) {",
+                  "return type === 'display' && data.length > 6 ?",
+                  "'<span title=\"' + data + '\">' + data.substr(0, 6) + '...</span>' : data;",
+                  "}"))),
+          
+            #head layout
+            initComplete = JS(
+            "function(settings, json) {",
+            "$(this.api().table().header()).css({'background-color': '#323232', 'color': '#fff'});",
+            "}"),
+            
+            pageLength = 10,
+            lengthMenu = c(10, 20, 50, 100, 300, 858)
+))
+```
+
+
