@@ -111,6 +111,7 @@ SAGs_BLAST_out<-SAGs_BLAST_out[subj_cov>80] #981
 SAGs_BLAST_out<-SAGs_BLAST_out[V7>80] #975
 SAGs_BLAST_out<-SAGs_BLAST_out[,list(V1,V2,V3,V5,V6,V7,subj_cov)]
 setnames(SAGs_BLAST_out,c("SAG_id","md5sum","identity","SAG_length","swarm_length","query_cov","subj_cov"))
+#identity filtering applied during BLAST search (see job script)
 #SAGs_BLAST_out<-SAGs_BLAST_out[identity==100]
 ```
 
@@ -377,16 +378,16 @@ datatable(head(SAGs_lt, 858),
             
             #data position in columns
             columnDefs = list(list(
-             # className = "dt-center", targets=c(1:10))),
+              className = "dt-center", targets=c(1:10))),
             
             #swarms IDs rendering
               #list(list(
-                targets = 2,
-                render = JS(
-                  "function(data, type, row, meta) {",
-                  "return type === 'display' && data.length > 6 ?",
-                  "'<span title=\"' + data + '\">' + data.substr(0, 6) + '...</span>' : data;",
-                  "}"))),
+                #targets = 2,
+                #render = JS(
+                  #"function(data, type, row, meta) {",
+                  #"return type === 'display' && data.length > 6 ?",
+                  #"'<span title=\"' + data + '\">' + data.substr(0, 6) + '...</span>' : data;",
+                  #"}"))),
           
             #head layout
             initComplete = JS(
